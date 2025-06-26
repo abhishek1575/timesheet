@@ -2,11 +2,9 @@ package timesheet.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 
 @Entity
 @Data
@@ -20,18 +18,16 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     @NotNull
     private String name;
 
-    @Column(name = "email")
-    @Pattern(regexp = "^[\\w-\\.]+@cstech\\.ai$", message = "Email must be @cstech.ai")
+    @Column(nullable = false, columnDefinition = "VARCHAR(255) CHECK (email REGEXP '^[\\\\w-\\\\.]+@cstech\\\\.ai$')")
     private String email;
-
 
     @NotNull
     private String password;
 
+    @NotNull(message="role is required")
     @Enumerated(EnumType.STRING)
     private Role role;
 

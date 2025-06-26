@@ -1,11 +1,8 @@
 package timesheet.dto;
 
 import lombok.Data;
-
 @Data
 public class AuthResponse {
-
-
     private Long id;
     private String name;
     private String email;
@@ -21,6 +18,5 @@ public class AuthResponse {
         this.jwt = jwt;
 
     }
-
 }
 

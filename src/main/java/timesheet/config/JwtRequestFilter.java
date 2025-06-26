@@ -1,6 +1,5 @@
 package timesheet.config;
 
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,12 +9,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import timesheet.config.JwtUtil;
 
 import java.io.IOException;
 
-@Component
 public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -27,48 +25,32 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-        // Handle OPTIONS requests explicitly (Preflight CORS)
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            response.setHeader("Access-Control-Allow-Origin", "*");
-            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-            response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-            response.setHeader("Access-Control-Allow-Credentials", "true");
-            response.setStatus(HttpServletResponse.SC_OK);
-            return;
-        }
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
 
-        // Process JWT Token if not an OPTIONS request
         final String authorizationHeader = request.getHeader("Authorization");
 
         String email = null;
         String jwt = null;
+
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
-
-            try {
-                email = jwtUtil.getEmailFromToken(jwt);
-            } catch (IllegalArgumentException e) {
-                System.out.println("Unable to get JWT Token");
-            } catch (ExpiredJwtException e) {
-                System.out.println("JWT Token has expired");
-            }
-        } else {
-            logger.warn("JWT Token does not begin with Bearer String");
+            email = jwtUtil.getEmailFromToken(jwt);
         }
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(email);
 
-            if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                usernamePasswordAuthenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+            if (jwtUtil.validateToken(jwt, userDetails)) {
+                UsernamePasswordAuthenticationToken authenticationToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                authenticationToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             }
         }
-
         chain.doFilter(request, response);
     }
 }
